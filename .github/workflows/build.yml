@@ -48,7 +48,10 @@ jobs:
     - name: Install p4a
       run: |
         pip install --upgrade pip
-        pip install python-for-android cython
+        pip install "cython<3.0"
+        pip install python-for-android
+        pip install pyjnius==1.4.2
+
 
 
     # 6. Setup Android SDK
