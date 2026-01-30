@@ -12,20 +12,24 @@ jobs:
 
     steps:
 
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Python
       - name: Setup Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"   # ✅ Correct version (not 3.1)
+          python-version: "3.10"   # ✅ Correct version
 
+      # 3️⃣ Setup Java 17
       - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: 17
 
+      # 4️⃣ Install system packages
       - name: Install system packages
         run: |
           sudo apt update
@@ -34,50 +38,62 @@ jobs:
           libncurses5-dev libncursesw5-dev libreadline-dev \
           liblzma-dev libbz2-dev default-jdk
 
+      # 5️⃣ Install Buildozer, Cython, virtualenv
       - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip
           pip install buildozer cython virtualenv
 
+      # 6️⃣ Setup Android SDK
       - name: Setup Android SDK
         run: |
           mkdir -p $HOME/android-sdk/cmdline-tools
           cd $HOME/android-sdk
 
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          # Download and unzip command line tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q commandlinetools-linux-*.zip
           mkdir -p cmdline-tools/latest
           mv cmdline-tools/* cmdline-tools/latest/ || true
 
+          # Export env variables for GitHub Actions
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:/usr/bin:/usr/local/bin:${PATH}" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/33.0.2:/usr/bin:/usr/local/bin:${PATH}" >> $GITHUB_ENV
 
+          # Accept SDK licenses
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+
+          # Install required SDK packages
           $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
             "platform-tools" \
             "platforms;android-33" \
             "build-tools;33.0.2"
 
+      # 7️⃣ Initialize Buildozer if spec file not present
       - name: Initialize Buildozer
         run: |
           if [ ! -f buildozer.spec ]; then
             buildozer init
           fi
 
+      # 8️⃣ Configure Buildozer to accept SDK license
       - name: Configure Buildozer
         run: |
           sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
 
+      # 9️⃣ Build APK
       - name: Build APK
         env:
           ANDROID_HOME: $HOME/android-sdk
           ANDROID_SDK_ROOT: $HOME/android-sdk
-          PATH: /usr/bin:/usr/local/bin:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:${{ env.PATH }}
+          PATH: /usr/bin:/usr/local/bin:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/33.0.2:${{ env.PATH }}
         run: |
           git --version
+          ls $HOME/android-sdk/build-tools/33.0.2/aidl
           buildozer android debug
 
+      # 🔟 Upload APK artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
