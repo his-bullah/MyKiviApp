@@ -8,11 +8,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
 
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -20,14 +20,16 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install system packages
+      - name: Install system tools
         run: |
           sudo apt update
           sudo apt install -y \
-            default-jdk \
+            git \
+            openjdk-17-jdk \
             zip \
             unzip \
-            git \
+            wget \
+            curl \
             build-essential \
             libssl-dev \
             libffi-dev \
@@ -38,6 +40,9 @@ jobs:
             libreadline-dev \
             liblzma-dev \
             libbz2-dev
+
+          git --version
+          java -version
 
       - name: Install Buildozer
         run: |
@@ -52,7 +57,7 @@ jobs:
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip commandlinetools-linux-*.zip
 
-          mkdir cmdline-tools/latest
+          mkdir -p cmdline-tools/latest
           mv cmdline-tools/* cmdline-tools/latest/ || true
 
           export ANDROID_HOME=$HOME/android-sdk
@@ -80,7 +85,6 @@ jobs:
         env:
           ANDROID_HOME: $HOME/android-sdk
           ANDROID_SDK_ROOT: $HOME/android-sdk
-          PATH: ${{ env.PATH }}:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools
         run: |
           buildozer android debug
 
